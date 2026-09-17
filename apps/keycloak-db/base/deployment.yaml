@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-db
+  labels:
+    app.kubernetes.io/name: keycloak-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-db
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4.5
+          args:
+            - --sql_generate_invisible_primary_key=OFF
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: spesaadomicilio
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: idm-local-db
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: idm-local-db
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: idm-local-db
+                  key: root-password
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD"
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d/00-create-keycloak-db.sql
+              subPath: 00-create-keycloak-db.sql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: keycloak-db-data
+        - name: initdb
+          configMap:
+            name: keycloak-db-init

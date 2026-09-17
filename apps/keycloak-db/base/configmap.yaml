@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-db-init
+  labels:
+    app.kubernetes.io/name: keycloak-db
+data:
+  00-create-keycloak-db.sql: |
+    CREATE DATABASE IF NOT EXISTS keycloak CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    GRANT ALL PRIVILEGES ON keycloak.* TO 'idmccno'@'%';
+    FLUSH PRIVILEGES;
